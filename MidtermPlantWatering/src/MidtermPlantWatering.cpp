@@ -18,6 +18,7 @@
 #include <Adafruit_MQTT.h>
 #include "Adafruit_MQTT/Adafruit_MQTT_SPARK.h"
 #include "Adafruit_MQTT/Adafruit_MQTT.h"
+#include "IoTTimer.h"
 
 //Variables for relay
 const int RELAYPIN = D16;
@@ -45,6 +46,8 @@ bool status;
 bool subValue;
 unsigned int last, lastTime;
 
+
+IoTTimer pubTimer;
 //object for the BME280
 Adafruit_BME280 myReading; //Defining bme object mine is called myReading
 //object for OLED called "display"
@@ -63,13 +66,13 @@ Adafruit_MQTT_SPARK mqtt(&TheClient,AIO_SERVER,AIO_SERVERPORT,AIO_USERNAME,AIO_K
 //Adafruit_MQTT_Subscribe subFeed = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/feed1");
 Adafruit_MQTT_Subscribe pumpOnOff = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/pumpOnOff");
 //Adafruit_MQTT_Subscribe brightnessled = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/brightnessled");
-
 Adafruit_MQTT_Publish Humidity = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/Humidity");
+Adafruit_MQTT_Publish Temperature = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/Temp");
+Adafruit_MQTT_Publish Moisture = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/Moisture");
 
 
-//delcare function
+//delcare functions
 float bmeConverted(float tempF);
-
 void MQTT_connect();
 bool MQTT_ping();
 
@@ -103,6 +106,7 @@ void setup() {
 
   mqtt.subscribe(&pumpOnOff);
   starttime = millis(); //get the current time;
+  pubTimer.startTimer(30000);
 }
 
 void loop() {
@@ -136,16 +140,19 @@ void loop() {
       }
     }
   }
-
-  if((millis()-lastTime > 6000)) {
+  //if(pubTimer.isTimerReady()){
+    if((millis()-lastTime > 120000)) {
     humidRH = myReading.readHumidity ();
     if(mqtt.Update()) {
-      Humidity.publish(humidRH);
-      Serial.printf("Publishing %0.2f \n",humidRH); 
-      } 
-    lastTime = millis();
-  }
-    
+       Humidity.publish(humidRH);
+       Temperature.publish(tempF);
+       Moisture.publish(moistureRead);
+       //Serial.printf("Publishing %0.2f \n",humidRH); 
+       } 
+     lastTime = millis();
+     //pubTimer.startTimer(30000);
+   }
+   
   //BLOCK FOR THE RELAY
   //digitalWrite(RELAYPIN, HIGH);
   //delay(1000);
@@ -203,7 +210,6 @@ void MQTT_connect() {
   }
   Serial.printf("MQTT Connected!\n");
 }
-
 bool MQTT_ping() {
   static unsigned int last;
   bool pingStatus;
