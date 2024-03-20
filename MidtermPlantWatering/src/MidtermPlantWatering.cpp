@@ -36,12 +36,14 @@ unsigned long lowpulseoccupancy = 0;
 float ratio = 0;
 float concentration = 0;
 //Variables for OLED
-const int ROT = 1;
+const int ROT = 0;
 const int OLED_RESET=-1;
 //Variables for BME280
 const int HEXADDRESS = 0X76;
 float tempC, pressPA, humidRH, tempF, convertedPA;
 bool status;
+//Time for timer
+int timeTimer = 120000;
 
 bool subValue;
 unsigned int last, lastTime;
@@ -108,7 +110,7 @@ void setup() {
 
   mqtt.subscribe(&pumpOnOff);
   starttime = millis(); //get the current time;
-  waterTimer.startTimer(1800000);
+  waterTimer.startTimer(timeTimer);
 }
 
   void loop() {
@@ -121,7 +123,7 @@ void setup() {
   display.printf("Time:\n %s\n\n", TimeOnly.c_str());
   moistureRead = analogRead(MOISTUREPIN);
   //display.printf("Moisture:\n %i\n", moistureRead);
-  //Serial.printf("moisture%i\n", moistureRead);
+  Serial.printf("moisture%i\n", moistureRead);
   tempC = myReading.readTemperature ();
   tempF = bmeConverted(tempC);
   
@@ -161,13 +163,11 @@ void setup() {
     if (moistureRead >= 2400) {
     digitalWrite(D16, HIGH);
     delay(50);
-    waterTimer.startTimer(1800000);
-  }  
-  else {
-  digitalWrite(D16, LOW);
-  }
-  }
-
+    digitalWrite(D16, LOW);
+    waterTimer.startTimer(timeTimer);
+    } 
+  } 
+  //}
   //Block for Air quality sensor
   airValue = airQualitySensor.getValue();
   current_quality= airQualitySensor.slope();
