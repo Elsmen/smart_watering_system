@@ -47,7 +47,7 @@ bool subValue;
 unsigned int last, lastTime;
 
 
-IoTTimer pubTimer;
+IoTTimer waterTimer;
 //object for the BME280
 Adafruit_BME280 myReading; //Defining bme object mine is called myReading
 //object for OLED called "display"
@@ -69,6 +69,8 @@ Adafruit_MQTT_Subscribe pumpOnOff = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME 
 Adafruit_MQTT_Publish Humidity = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/Humidity");
 Adafruit_MQTT_Publish Temperature = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/Temp");
 Adafruit_MQTT_Publish Moisture = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/Moisture");
+Adafruit_MQTT_Publish QualityAir = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/Air_Quality");
+Adafruit_MQTT_Publish DustConcentration = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/DustConcentration");
 
 
 //delcare functions
@@ -106,10 +108,10 @@ void setup() {
 
   mqtt.subscribe(&pumpOnOff);
   starttime = millis(); //get the current time;
-  pubTimer.startTimer(30000);
+  waterTimer.startTimer(1800000);
 }
 
-void loop() {
+  void loop() {
   MQTT_connect();
   MQTT_ping();
 
@@ -123,7 +125,7 @@ void loop() {
   tempC = myReading.readTemperature ();
   tempF = bmeConverted(tempC);
   
-  display.printf("TempF      %0.1f\n, Moisture  %i\n", tempF, moistureRead);
+  display.printf("TempF      %0.1f\nMoisture  %i\n", tempF, moistureRead);
   display.display();
   display.setCursor(0,0);
 
@@ -147,17 +149,24 @@ void loop() {
        Humidity.publish(humidRH);
        Temperature.publish(tempF);
        Moisture.publish(moistureRead);
-       //Serial.printf("Publishing %0.2f \n",humidRH); 
-       } 
-     lastTime = millis();
-     //pubTimer.startTimer(30000);
+       QualityAir.publish(airValue);
+       DustConcentration.publish(concentration);
+    } 
+    lastTime = millis();
+   
    }
    
   //BLOCK FOR THE RELAY
-  //digitalWrite(RELAYPIN, HIGH);
-  //delay(1000);
-  //digitalWrite(RELAYPIN, LOW);
-  //delay(10000);
+  if(waterTimer.isTimerReady()){
+    if (moistureRead >= 2400) {
+    digitalWrite(D16, HIGH);
+    delay(50);
+    waterTimer.startTimer(1800000);
+  }  
+  else {
+  digitalWrite(D16, LOW);
+  }
+  }
 
   //Block for Air quality sensor
   airValue = airQualitySensor.getValue();
